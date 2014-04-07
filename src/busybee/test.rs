@@ -25,10 +25,8 @@ fn busybee_test() {
     fn lookup(server_id: ServerID) -> SocketAddr {
         if (server_id << 32) == 1 {
             sock!(addr1)
-            // println!("sup2");
         } else {
             sock!(addr2)
-            // println!("sup2");
         }
     }
 
@@ -45,9 +43,9 @@ fn busybee_test() {
 
     match bb2.recv() {
         Err(rc) => fail!(rc),
-        Ok((sid, msg)) => {
-            println!("Got message from {}", sid);
-            println!("{}", msg);
+        Ok((sid, reply)) => {
+            // The reply is NULL-terminated
+            assert_eq!(reply.slice(0, reply.len() - 1), msg.as_bytes());
         }
     }
 }

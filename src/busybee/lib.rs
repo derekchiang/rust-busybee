@@ -8,6 +8,8 @@
 #![allow(non_camel_case_types)]
 #![allow(dead_code)]
 
+extern crate serialize;
+
 // std
 use std::cast::transmute;
 use std::c_str::CString;
@@ -15,6 +17,9 @@ use std::io::net::ip::SocketAddr;
 use std::ptr::{null};
 use std::libc::{c_void, c_int, c_schar};
 use std::slice::raw::buf_as_slice;
+
+// serialize
+use serialize::{Encodable, Decodable};
 
 // busybee
 use busybee::*;
@@ -187,7 +192,7 @@ impl Busybee {
         }
     }
 
-    pub fn deliver(&mut self, server_id: ServerID, msg: &[u8]) -> bool {
+    pub fn deliver<'a>(&'a mut self, server_id: ServerID, msg: &'a [u8]) -> bool {
         let c_str = msg.to_c_str();
         let len = c_str.len() as u64;
         unsafe {
