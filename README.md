@@ -1,6 +1,6 @@
 # rust-busybee
 
-A wrapper for [busybee](https://github.com/rescrv/busybee).
+A Rust wrapper for [busybee](https://github.com/rescrv/busybee).
 
 ## Status
 
