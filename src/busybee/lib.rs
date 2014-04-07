@@ -71,8 +71,8 @@ impl BusybeeMapper {
     pub fn new(mut lookup: LookupFn) -> BusybeeMapper {
         extern "C" fn c_lookup(user_data: *mut c_void, sid: uint64_t,
            ip_addr: *mut *c_schar, port: *mut uint16_t) -> c_int {
-            let lookup: &mut LookupFn = unsafe { transmute(user_data) };
-            let addr = (*lookup)(sid);
+            let lookup: LookupFn = unsafe { transmute(user_data) };
+            let addr = lookup(sid);
             unsafe {
                 *ip_addr = addr.ip.to_str().to_c_str().unwrap();
                 *port = addr.port;
@@ -81,7 +81,7 @@ impl BusybeeMapper {
         }
 
         let mapper = unsafe {
-            busybee_mapper_create(&mut lookup as *mut LookupFn as *mut c_void, Some(c_lookup))
+            busybee_mapper_create(transmute(lookup), Some(c_lookup))
         };
 
         BusybeeMapper { inner: mapper }
