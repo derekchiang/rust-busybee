@@ -8,7 +8,7 @@ Seems to work.
 
 ## TODO
 
-Allow sending arbitrary Rust objects; probably use msgpack for serialization.
+Currently we are using serializing objects to/from JSON.  In the future we will want to use something like msgpack.
 
 ## License
 
