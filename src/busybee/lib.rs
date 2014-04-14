@@ -13,13 +13,14 @@ extern crate serialize;
 // std
 use std::cast::transmute;
 use std::c_str::CString;
+use std::io::{MemWriter, MemReader, IoError};
 use std::io::net::ip::SocketAddr;
 use std::ptr::{null};
 use std::libc::{c_void, c_int, c_schar};
 use std::slice::raw::buf_as_slice;
 
 // serialize
-use serialize::{Encodable, Decodable};
+use serialize::{json, Encodable, Decodable};
 
 // busybee
 use busybee::*;
@@ -211,7 +212,7 @@ impl Busybee {
         unsafe { to_rc!(busybee_mta_drop(self.inner, server_id)) }
     }
 
-    pub fn send<'a>(&'a mut self, server_id: ServerID, msg: &'a [u8]) -> BusybeeReturncode {
+    pub fn send<'a>(&mut self, server_id: ServerID, msg: &'a [u8]) -> BusybeeReturncode {
         let c_str = msg.to_c_str();
         let len = c_str.len() as u64;
         unsafe {
@@ -219,7 +220,16 @@ impl Busybee {
         }
     }
 
-    pub fn recv<'a>(&'a mut self) -> Result<(ServerID, ~[u8]), BusybeeReturncode> {
+    pub fn send_object<'a, T: Encodable<json::Encoder<'a>, IoError>>(&mut self, server_id: ServerID, msg: T) -> BusybeeReturncode {
+        let mut w = MemWriter::new();
+        let mut encoder = json::Encoder::new(&mut w as &mut std::io::Writer);
+        match msg.encode(&mut encoder) {
+            Ok(()) => self.send(server_id, w.unwrap()),
+            Err(e) => fail!("json encoding error: {}", e),
+        }
+    }
+
+    pub fn recv<'a>(&mut self) -> Result<(ServerID, ~[u8]), BusybeeReturncode> {
         let mut c_server_id = 0u64;
         let mut c_msg = null();
         let mut c_msg_sz = 0;
@@ -230,12 +240,27 @@ impl Busybee {
             if rc != BUSYBEE_SUCCESS {
                 Err(to_rc!(rc))
             } else {
-                let c_str = buf_as_slice(c_msg, c_msg_sz as uint, |bytes| {
+                buf_as_slice(c_msg, c_msg_sz as uint, |bytes| {
                     let bytes: &[u8] = transmute(bytes);
-                    bytes.to_c_str()
-                });
-                Ok((c_server_id, c_str.as_bytes().to_owned()))
+                    Ok((c_server_id, bytes.to_owned()))
+                })
             }
+        }
+    }
+
+    pub fn recv_object<T: Decodable<json::Decoder, json::Error>>(&mut self) -> Result<(ServerID, T), BusybeeReturncode> {
+        let (sid, bytes) = try!(self.recv());
+        println!("{}", bytes);
+        println!("{}", std::str::from_utf8(bytes).unwrap());
+        let mut reader = MemReader::new(bytes);
+        let json_object = match json::from_reader(&mut reader as &mut std::io::Reader) {
+            Ok(obj) => obj,
+            Err(e) => fail!("error decoding json from bytes: {}", e),
+        };
+        let mut decoder = json::Decoder::new(json_object);
+        match Decodable::decode(&mut decoder) {
+            Ok(msg) => Ok((sid, msg)),
+            Err(e) => fail!("error decoding object from json: {}", e),
         }
     }
 
