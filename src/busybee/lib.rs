@@ -55,11 +55,11 @@ macro_rules! to_rc(
 )
 
 pub struct Busybee {
-    inner: *mut busybee_mta
+    priv inner: *mut busybee_mta
 }
 
 pub struct BusybeeMapper {
-    inner: *mut busybee_mapper
+    priv inner: *mut busybee_mapper
 }
 
 pub type ServerID = u64;
@@ -74,7 +74,7 @@ pub type LookupFn = fn (ServerID) -> SocketAddr;
 
 impl BusybeeMapper {
 
-    pub fn new(mut lookup: LookupFn) -> BusybeeMapper {
+    pub fn new(lookup: LookupFn) -> BusybeeMapper {
         extern "C" fn c_lookup(user_data: *mut c_void, sid: uint64_t,
            ip_addr: *mut *c_schar, port: *mut uint16_t) -> c_int {
             let lookup: LookupFn = unsafe { transmute(user_data) };
@@ -250,8 +250,6 @@ impl Busybee {
 
     pub fn recv_object<T: Decodable<json::Decoder, json::Error>>(&mut self) -> Result<(ServerID, T), BusybeeReturncode> {
         let (sid, bytes) = try!(self.recv());
-        println!("{}", bytes);
-        println!("{}", std::str::from_utf8(bytes).unwrap());
         let mut reader = MemReader::new(bytes);
         let json_object = match json::from_reader(&mut reader as &mut std::io::Reader) {
             Ok(obj) => obj,
