@@ -54,17 +54,20 @@ macro_rules! to_rc(
     )
 )
 
+#[deriving(Clone)]
 pub struct Busybee {
     priv inner: *mut busybee_mta
-}
-
-pub struct BusybeeMapper {
-    priv inner: *mut busybee_mapper
 }
 
 pub type ServerID = u64;
 
 pub type LookupFn = fn (ServerID) -> SocketAddr;
+
+#[deriving(Clone)]
+pub struct BusybeeMapper {
+    priv inner: *mut busybee_mapper,
+    priv lookup: LookupFn
+}
 
 // macro_rules! println(
 //     ($s: expr) => (
@@ -90,7 +93,14 @@ impl BusybeeMapper {
             busybee_mapper_create(transmute(lookup), Some(c_lookup))
         };
 
-        BusybeeMapper { inner: mapper }
+        BusybeeMapper {
+            inner: mapper,
+            lookup: lookup
+        }
+    }
+
+    pub fn lookup(&mut self, sid: ServerID) -> SocketAddr {
+        self.lookup(sid)
     }
 
 }
