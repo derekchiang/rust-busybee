@@ -27,6 +27,7 @@ use busybee::*;
 
 mod busybee;
 
+#[deriving(Eq, Show)]
 pub enum BusybeeReturncode {
     SUCCESS,
     SHUTDOWN,
